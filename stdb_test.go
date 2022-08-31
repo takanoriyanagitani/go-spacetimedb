@@ -16,7 +16,11 @@ import (
 	// use postgres driver to generate sql
 	_ "github.com/takanoriyanagitani/go-sql2keyval/pkg/sqldb/postgres"
 
+	// use pgx(direct) to connect to postgres
+	"github.com/jackc/pgx/v4/pgxpool"
+
 	s2k "github.com/takanoriyanagitani/go-sql2keyval"
+	spx "github.com/takanoriyanagitani/go-sql2keyval/pkg/postgres/pgx"
 	std "github.com/takanoriyanagitani/go-sql2keyval/pkg/stdsql"
 )
 
@@ -175,4 +179,104 @@ func TestNewSetter(t *testing.T) {
 	if nil != e {
 		t.Errorf("Unable to set: %v", e)
 	}
+}
+
+func checker[T comparable](expected, got T, t *testing.T) {
+	if expected != got {
+		t.Errorf("Unexpected value got.")
+		t.Errorf("expected: %v", expected)
+		t.Errorf("got: %v", got)
+	}
+}
+
+func TestStdb(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ToBatch", func(t *testing.T) {
+		t.Run("empty", func(t *testing.T) {
+			ts := TsSample{
+				id:   "iidd",
+				date: time.Now(),
+				pair: s2k.Pair{
+					Key: nil,
+					Val: nil,
+				},
+			}
+			var d2s Date2Str = func(_ time.Time) string { return "1970_01_01" }
+			var b s2k.Iter[s2k.Batch] = ts.ToBatch(d2s)
+
+			checker("devices", b().Value().Bucket(), t)
+			checker("dates", b().Value().Bucket(), t)
+			checker("dates_iidd", b().Value().Bucket(), t)
+			checker("devices_1970_01_01", b().Value().Bucket(), t)
+			checker("data_1970_01_01_iidd", b().Value().Bucket(), t)
+
+			checker(true, b().Empty(), t)
+		})
+	})
+
+	t.Run("pgx test", func(t *testing.T) {
+		t.Parallel()
+
+		pgx_dbname := os.Getenv("ITEST_SPACETIMEDB_PGX_DBNAME")
+		if len(pgx_dbname) < 1 {
+			t.Skip("skipping pgx test...")
+		}
+
+		pool, e := pgxpool.Connect(context.Background(), "dbname="+pgx_dbname)
+		if nil != e {
+			t.Errorf("Unable to connect: %v", e)
+		}
+
+		t.Run("pgx con got", func(t *testing.T) {
+			t.Parallel()
+
+			var tableCreater s2k.AddBucket = spx.PgxAddBucketNew(pool)
+			var upsert s2k.SetBatch = spx.PgxBatchUpsertNew(pool)
+
+			var d2s Date2Str = func(_ time.Time) string { return "1980_01_01" }
+
+			var batchSetBuilder func(Date2Str) BatchSet = NewBatchSetter(tableCreater, upsert, 16)
+			var batchSetter BatchSet = batchSetBuilder(d2s)
+
+			t.Run("empty", func(t *testing.T) {
+				t.Parallel()
+				var samples s2k.Iter[TsSample] = s2k.IterFromArray([]TsSample{})
+
+				e := batchSetter(context.Background(), samples)
+				if nil != e {
+					t.Errorf("Unable to upsert key/val: %v", e)
+				}
+			})
+
+			t.Run("single", func(t *testing.T) {
+				t.Parallel()
+				var samples s2k.Iter[TsSample] = s2k.IterFromArray([]TsSample{
+					TsSampleNew("i3776", time.Now(), []byte("k"), []byte("v")),
+				})
+
+				e := batchSetter(context.Background(), samples)
+				if nil != e {
+					t.Errorf("Unable to upsert key/val: %v", e)
+				}
+			})
+
+			t.Run("multi", func(t *testing.T) {
+				t.Parallel()
+				var samples s2k.Iter[TsSample] = s2k.IterFromArray([]TsSample{
+					TsSampleNew("i634", time.Now(), []byte("k"), []byte("v")),
+					TsSampleNew("i333", time.Now(), []byte("l"), []byte("w")),
+				})
+
+				e := batchSetter(context.Background(), samples)
+				if nil != e {
+					t.Errorf("Unable to upsert key/val: %v", e)
+				}
+			})
+		})
+
+		t.Cleanup(func() {
+			pool.Close()
+		})
+	})
 }

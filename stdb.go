@@ -16,6 +16,15 @@ type TsSample struct {
 	pair s2k.Pair
 }
 
+func TsSampleNew(id string, date time.Time, Key, Val []byte) TsSample {
+	pair := s2k.Pair{Key, Val}
+	return TsSample{
+		id,
+		date,
+		pair,
+	}
+}
+
 func (t TsSample) ToDatesTableName() string               { return "dates_" + t.id }              // dates_cafef00ddeadbeafface864299792458
 func (t TsSample) ToDevicesTableName(dtymd string) string { return "devices_" + dtymd }           // devices_2022_08_31
 func (t TsSample) ToDtDvTableName(dtymd string) string    { return "data_" + dtymd + "_" + t.id } // data_2022_08_31_cafef00ddeadbeafface864299792458
@@ -26,11 +35,12 @@ func (t TsSample) ToBatch(d2s Date2Str) s2k.Iter[s2k.Batch] {
 	bid := []byte(t.id)
 	ymd := d2s(t.date)
 	bym := []byte(ymd)
+	emp := []byte("")
 	return s2k.IterFromArray([]s2k.Batch{
-		s2k.BatchNew("devices", bid, nil),
-		s2k.BatchNew("dates", bym, nil),
-		s2k.BatchNew(t.ToDatesTableName(), bym, nil),
-		s2k.BatchNew(t.ToDevicesTableName(ymd), bid, nil),
+		s2k.BatchNew("devices", bid, emp),
+		s2k.BatchNew("dates", bym, emp),
+		s2k.BatchNew(t.ToDatesTableName(), bym, emp),
+		s2k.BatchNew(t.ToDevicesTableName(ymd), bid, emp),
 		s2k.BatchNew(t.ToDtDvTableName(ymd), t.AsKey(), t.AsVal()),
 	})
 }
@@ -124,8 +134,8 @@ func samples2batch(s s2k.Iter[TsSample], d2s Date2Str, lmt int) s2k.Iter[s2k.Bat
 	return s2k.IterFromChan(c)
 }
 
-func NewBatchSetter(fastAdder s2k.AddBucket, setter s2k.SetBatch, lmt int) func(dateConverter Date2Str, runner CommandRunner) BatchSet {
-	return func(dateConverter Date2Str, cmdRunner CommandRunner) BatchSet {
+func NewBatchSetter(fastAdder s2k.AddBucket, setter s2k.SetBatch, lmt int) func(dateConverter Date2Str) BatchSet {
+	return func(dateConverter Date2Str) BatchSet {
 		return func(ctx context.Context, many s2k.Iter[TsSample]) error {
 			var bi s2k.Iter[s2k.Batch] = samples2batch(many, dateConverter, lmt)
 			return setter(ctx, IterMitm(bi, func(b s2k.Batch) {
