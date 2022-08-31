@@ -3,8 +3,8 @@ module github.com/takanoriyanagitani/go-spacetimedb
 go 1.19
 
 require (
-	github.com/jackc/pgx/v4 v4.17.0
-	github.com/takanoriyanagitani/go-sql2keyval v0.1.0
+	github.com/jackc/pgx/v4 v4.17.1
+	github.com/takanoriyanagitani/go-sql2keyval v0.4.0
 )
 
 require (
