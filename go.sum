@@ -106,6 +106,8 @@ github.com/takanoriyanagitani/go-sql2keyval v0.1.0 h1:gjLrtbPgTLiH7q+clKsGYgt07m
 github.com/takanoriyanagitani/go-sql2keyval v0.1.0/go.mod h1:2nDsKssUnTMkRJKc5AknLdJV9Nuo08cFXm0QXQH1be8=
 github.com/takanoriyanagitani/go-sql2keyval v0.4.0 h1:7GzOA/xPdbfetPmKpltUBY4gPWfV/pQO3C6/IPFOgcU=
 github.com/takanoriyanagitani/go-sql2keyval v0.4.0/go.mod h1:olohv8venEYVbUBv1tG0rmS9rJID4vc53XRUbie6NHw=
+github.com/takanoriyanagitani/go-sql2keyval v0.5.0 h1:KeSUdn9JtL7Yo9TaSFWf8fCZdqS9CtRjNfV5nzF7MmE=
+github.com/takanoriyanagitani/go-sql2keyval v0.5.0/go.mod h1:olohv8venEYVbUBv1tG0rmS9rJID4vc53XRUbie6NHw=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=

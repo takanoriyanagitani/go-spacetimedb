@@ -233,10 +233,11 @@ func TestStdb(t *testing.T) {
 
 			var tableCreater s2k.AddBucket = spx.PgxAddBucketNew(pool)
 			var upsert s2k.SetBatch = spx.PgxBatchUpsertNew(pool)
+			var fastCreator s2k.AddBucket = FastBucketAdderNew(tableCreater)
 
 			var d2s Date2Str = func(_ time.Time) string { return "1980_01_01" }
 
-			var batchSetBuilder func(Date2Str) BatchSet = NewBatchSetter(tableCreater, upsert, 16)
+			var batchSetBuilder func(Date2Str) BatchSet = NewBatchSetter(fastCreator, upsert, 16)
 			var batchSetter BatchSet = batchSetBuilder(d2s)
 
 			t.Run("empty", func(t *testing.T) {

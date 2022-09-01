@@ -3,6 +3,7 @@ package stdb
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	s2k "github.com/takanoriyanagitani/go-sql2keyval"
@@ -97,39 +98,40 @@ func NewSetter(adder s2k.AddBucket, setter s2k.Set) func(dateConverter Date2Str,
 	}
 }
 
-func fastBucketAdderNew(a s2k.AddBucket) s2k.AddBucket {
-	// TODO memoize
-	return a
-}
+func FastBucketAdderNew(adder s2k.AddBucket) s2k.AddBucket {
+	mp := make(map[string]interface{})
+	var lk sync.RWMutex
 
-func IterFlat2Chan[T any](i s2k.Iter[s2k.Iter[T]], c chan<- T, lmt int) {
-	j := 0
-	for oi := i(); oi.HasValue(); oi = i() {
-		var i s2k.Iter[T] = oi.Value()
-		for o := i(); o.HasValue(); o = i() {
-			var t T = o.Value()
-			if j < lmt {
-				c <- t
-			}
-			j += 1
-		}
+	hasBucket := func(b string) bool {
+		lk.RLock()
+		_, ok := mp[b]
+		lk.RUnlock()
+		return ok
 	}
-}
 
-func IterMitm[T any](i s2k.Iter[T], f func(T)) s2k.Iter[T] {
-	return func() s2k.Option[T] {
-		var o s2k.Option[T] = i()
-		if o.HasValue() {
-			f(o.Value())
+	addBucket := func(ctx context.Context, b string) error {
+		e := adder(ctx, b)
+		if nil != e {
+			return e
 		}
-		return o
+		lk.Lock()
+		defer lk.Unlock()
+		mp[b] = nil
+		return e
+	}
+
+	return func(ctx context.Context, bucket string) error {
+		if hasBucket(bucket) {
+			return nil
+		}
+		return addBucket(ctx, bucket)
 	}
 }
 
 func samples2batch(s s2k.Iter[TsSample], d2s Date2Str, lmt int) s2k.Iter[s2k.Batch] {
 	mapd := s2k.IterMap(s, func(ts TsSample) s2k.Iter[s2k.Batch] { return ts.ToBatch(d2s) })
 	c := make(chan s2k.Batch, lmt)
-	IterFlat2Chan(mapd, c, lmt)
+	s2k.IterFlat2Chan(mapd, c, lmt)
 	close(c)
 	return s2k.IterFromChan(c)
 }
@@ -138,9 +140,10 @@ func NewBatchSetter(fastAdder s2k.AddBucket, setter s2k.SetBatch, lmt int) func(
 	return func(dateConverter Date2Str) BatchSet {
 		return func(ctx context.Context, many s2k.Iter[TsSample]) error {
 			var bi s2k.Iter[s2k.Batch] = samples2batch(many, dateConverter, lmt)
-			return setter(ctx, IterMitm(bi, func(b s2k.Batch) {
+			var createOrIgnore = bi.IntoInspect(func(b s2k.Batch) {
 				_ = fastAdder(ctx, b.Bucket()) // unable to create missing table -> query will be rejected anyway
-			}))
+			})
+			return setter(ctx, createOrIgnore)
 		}
 	}
 }
