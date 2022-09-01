@@ -31,6 +31,8 @@ func (t TsSample) ToDevicesTableName(dtymd string) string { return "devices_" + 
 func (t TsSample) ToDtDvTableName(dtymd string) string    { return "data_" + dtymd + "_" + t.id } // data_2022_08_31_cafef00ddeadbeafface864299792458
 func (t TsSample) AsKey() []byte                          { return t.pair.Key }
 func (t TsSample) AsVal() []byte                          { return t.pair.Val }
+func (t TsSample) AsId() string                           { return t.id }
+func (t TsSample) AsDate() time.Time                      { return t.date }
 
 func (t TsSample) ToBatch(d2s Date2Str) s2k.Iter[s2k.Batch] {
 	bid := []byte(t.id)

@@ -64,7 +64,7 @@ func BenchmarkStdb(b *testing.B) {
 		}
 
 		i2sample := func(_ int) TsSample {
-		    keybuf := make([]byte, 8)
+			keybuf := make([]byte, 8)
 			binary.LittleEndian.PutUint64(keybuf, uint64(time.Now().UnixNano()))
 			updtRand()
 			return TsSampleNew("idid", time.Now(), keybuf, randBytes)
