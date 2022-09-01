@@ -34,6 +34,11 @@ type SampleDto struct {
 	Val  []byte
 }
 
+func (s *SampleDto) UseId(id string)      { s.Id = id }
+func (s *SampleDto) UseDate(dt time.Time) { s.Date = dt }
+func (s *SampleDto) UseKey(k []byte)      { s.Key = k }
+func (s *SampleDto) UseVal(v []byte)      { s.Val = v }
+
 func (s *SampleDto) ToBytes(buf *bytes.Buffer) (packed []byte, e error) {
 	encoder := cbor.NewEncoder(buf)
 	e = encoder.Encode(s)
@@ -47,19 +52,12 @@ func FromBytes(b []byte) (unpacked SampleDto, e error) {
 	return
 }
 
-func FromTs(t *sp.TsSample) (s SampleDto) {
-	s.Id = t.AsId()
-	s.Date = t.AsDate()
-	s.Key = t.AsKey()
-	s.Val = t.AsVal()
-	return
-}
-
 func newPacker() CborPack {
 	var buf bytes.Buffer
 	return func(samples []sp.TsSample) (packed []byte, e error) {
 		for _, ts := range samples {
-			var s SampleDto = FromTs(&ts)
+			var s SampleDto
+			ts.ForUser(&s)
 			_, e = s.ToBytes(&buf)
 			if nil != e {
 				return nil, e
@@ -70,7 +68,7 @@ func newPacker() CborPack {
 }
 
 func newUnpacker() CborUnpack {
-    return func(packed []byte)(unpacked []sp.TsSample, e error){
-        return
-    }
+	return func(packed []byte) (unpacked []sp.TsSample, e error) {
+		return
+	}
 }

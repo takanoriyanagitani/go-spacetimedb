@@ -17,6 +17,13 @@ type TsSample struct {
 	pair s2k.Pair
 }
 
+type TsUser interface {
+	UseId(id string)
+	UseDate(dt time.Time)
+	UseKey(key []byte)
+	UseVal(val []byte)
+}
+
 func TsSampleNew(id string, date time.Time, Key, Val []byte) TsSample {
 	pair := s2k.Pair{Key, Val}
 	return TsSample{
@@ -31,8 +38,12 @@ func (t TsSample) ToDevicesTableName(dtymd string) string { return "devices_" + 
 func (t TsSample) ToDtDvTableName(dtymd string) string    { return "data_" + dtymd + "_" + t.id } // data_2022_08_31_cafef00ddeadbeafface864299792458
 func (t TsSample) AsKey() []byte                          { return t.pair.Key }
 func (t TsSample) AsVal() []byte                          { return t.pair.Val }
-func (t TsSample) AsId() string                           { return t.id }
-func (t TsSample) AsDate() time.Time                      { return t.date }
+func (t TsSample) ForUser(u TsUser) {
+	u.UseId(t.id)
+	u.UseDate(t.date)
+	u.UseKey(t.pair.Key)
+	u.UseVal(t.pair.Val)
+}
 
 func (t TsSample) ToBatch(d2s Date2Str) s2k.Iter[s2k.Batch] {
 	bid := []byte(t.id)
