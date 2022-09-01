@@ -215,6 +215,22 @@ func TestStdb(t *testing.T) {
 		})
 	})
 
+	t.Run("FastBucketAdderNew", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("original adder error", func(t *testing.T) {
+			var adder s2k.AddBucket = func(_c context.Context, _b string) error {
+				return fmt.Errorf("Must fail")
+			}
+
+			var fastAdder s2k.AddBucket = FastBucketAdderNew(adder)
+			e := fastAdder(context.Background(), "")
+			if nil == e {
+				t.Errorf("Must fail")
+			}
+		})
+	})
+
 	t.Run("pgx test", func(t *testing.T) {
 		t.Parallel()
 
