@@ -26,6 +26,7 @@ func CborVlogNew() *cborVlog {
 
 func (c *cborVlog) Pack(samples []sp.TsSample) ([]byte, error)  { return c.packer(samples) }
 func (c *cborVlog) Unpack(packed []byte) ([]sp.TsSample, error) { return c.unpacker(packed) }
+func (c *cborVlog) AsVlog() sp.Vlog                             { return c }
 
 type SampleDto struct {
 	Id   string
