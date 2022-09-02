@@ -86,6 +86,60 @@ func TestVlcb(t *testing.T) {
 				checkerBytes(t, sdto.Key, []byte("k"))
 				checkerBytes(t, sdto.Val, []byte("v"))
 			})
+
+			t.Run("multi", func(t *testing.T) {
+				t.Parallel()
+
+				var cv sp.Vlog = CborVlogNew()
+				var dt time.Time = time.Date(
+					1970, time.January, 1, 23, 59, 59, 0, time.UTC,
+				)
+				packed, e := cv.Pack([]sp.TsSample{
+					sp.TsSampleNew(
+						"idid",
+						dt,
+						[]byte("k"),
+						[]byte("v"),
+					),
+					sp.TsSampleNew(
+						"iidd",
+						dt,
+						[]byte("l"),
+						[]byte("m"),
+					),
+				})
+				if nil != e {
+					t.Errorf("Unable to pack: %v", e)
+				}
+				if 0 == len(packed) {
+					t.Errorf("Must not be empty.")
+				}
+
+				unpacked, e := cv.Unpack(packed)
+				if nil != e {
+					t.Errorf("Unable to unpack: %v", e)
+				}
+
+				if 2 != len(unpacked) {
+					t.Errorf("Unexpected len: %v", len(unpacked))
+				}
+
+				var up sp.TsSample = unpacked[0]
+				var sdto SampleDto
+				up.ForUser(&sdto)
+
+				checker(t, sdto.Id, "idid")
+				checker(t, sdto.Date.UnixNano(), dt.UnixNano())
+				checkerBytes(t, sdto.Key, []byte("k"))
+				checkerBytes(t, sdto.Val, []byte("v"))
+
+				unpacked[1].ForUser(&sdto)
+
+				checker(t, sdto.Id, "iidd")
+				checker(t, sdto.Date.UnixNano(), dt.UnixNano())
+				checkerBytes(t, sdto.Key, []byte("l"))
+				checkerBytes(t, sdto.Val, []byte("m"))
+			})
 		})
 	})
 }
