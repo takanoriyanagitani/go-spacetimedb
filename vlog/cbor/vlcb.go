@@ -39,16 +39,23 @@ func (s *SampleDto) UseDate(dt time.Time) { s.Date = dt }
 func (s *SampleDto) UseKey(k []byte)      { s.Key = k }
 func (s *SampleDto) UseVal(v []byte)      { s.Val = v }
 
+func (s *SampleDto) ToSample() sp.TsSample {
+	return sp.TsSampleNew(
+		s.Id,
+		s.Date,
+		s.Key,
+		s.Val,
+	)
+}
+
 func (s *SampleDto) ToBytes(buf *bytes.Buffer) (packed []byte, e error) {
 	encoder := cbor.NewEncoder(buf)
 	e = encoder.Encode(s)
 	return buf.Bytes(), e
 }
 
-func FromBytes(b []byte) (unpacked SampleDto, e error) {
-	rdr := bytes.NewReader(b)
-	decoder := cbor.NewDecoder(rdr)
-	e = decoder.Decode(&unpacked)
+func FromDecoder(d *cbor.Decoder) (unpacked SampleDto, e error) {
+	e = d.Decode(&unpacked)
 	return
 }
 
@@ -69,6 +76,14 @@ func newPacker() CborPack {
 
 func newUnpacker() CborUnpack {
 	return func(packed []byte) (unpacked []sp.TsSample, e error) {
-		return
+		rdr := bytes.NewReader(packed)
+		dec := cbor.NewDecoder(rdr)
+
+		// error => skip
+		for u, e := FromDecoder(dec); nil == e; u, e = FromDecoder(dec) {
+			var t sp.TsSample = u.ToSample()
+			unpacked = append(unpacked, t)
+		}
+		return unpacked, nil
 	}
 }
